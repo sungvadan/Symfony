@@ -18,6 +18,7 @@ class AdvertController extends Controller
 	
 	public function indexAction()
 	{
+		/*test commit sur mac */
 		return $this->render('OCPlatformBundle:Advert:index.html.twig',array('listAdverts'=>array()));
 	}
 
