@@ -29,6 +29,15 @@
     </ul>
   </div>
 
+  <div class="categories">
+    <h2>Cette annonce appratient aux catégories suivantes :</h2>
+    <ul>
+      {% for category in advert.categories %}
+      <li>{{ category.name }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
   <p>
     <a href="{{ path('oc_platform_home') }}" class="btn btn-default">
       <i class="glyphicon glyphicon-chevron-left"></i>

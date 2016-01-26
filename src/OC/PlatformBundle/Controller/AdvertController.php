@@ -42,12 +42,10 @@ class AdvertController extends Controller
 	    }
 
 	    $listApplications = $em->getRepository('OCPlatformBundle:Application')->findBy(array('advert'=>$advert));
-	        return $this->render('OCPlatformBundle:Advert:view.html.twig', array(
+        return $this->render('OCPlatformBundle:Advert:view.html.twig', array(
 	      'advert' => $advert,
 	      'listApplications' => $listApplications
 	    ));
-
-
 
 		return $this->render('OCPlatformBundle:Advert:view.html.twig', array(
 		  'advert' => $advert
@@ -120,16 +118,50 @@ class AdvertController extends Controller
 		// On fixe en dur une liste ici, bien entendu par la suite
 		// on la récupérera depuis la BDD !
 		$listAdverts = array(
-		array('id' => 2, 'title' => 'Recherche développeur Symfony2'),
-		array('id' => 5, 'title' => 'Mission de webmaster'),
-		array('id' => 9, 'title' => 'Offre de stage webdesigner')
+			array('id' => 2, 'title' => 'Recherche développeur Symfony2'),
+			array('id' => 5, 'title' => 'Mission de webmaster'),
+			array('id' => 9, 'title' => 'Offre de stage webdesigner')
 		);
 
 		return $this->render('OCPlatformBundle:Advert:menu.html.twig', array(
-		// Tout l'intérêt est ici : le contrôleur passe
-		// les variables nécessaires au template !
-		'listAdverts' => $listAdverts
+			// Tout l'intérêt est ici : le contrôleur passe
+			// les variables nécessaires au template !
+			'listAdverts' => $listAdverts
 		));
+	}
+
+	public function editAction($id, Request $request)
+	{
+		$em = $this->getDoctrine()->getManager();
+		$advert = $em->getRepository("OCPlatformBundle:Advert")->find($id);
+		if($advert === null){
+			throw new NotFoundHttpException("Cette article n'existe pas");
+		}
+		$listCategories = $em->getRepository("OCPlatformBundle:Category")->findAll();
+		foreach ($listCategories as $category) {
+			$advert->addCategory($category);
+		}
+		$em->flush();
+		$listApplications = $em->getRepository('OCPlatformBundle:Application')->findBy(array('advert'=>$advert));
+        return $this->render('OCPlatformBundle:Advert:view.html.twig', array(
+	      'advert' => $advert,
+	      'listApplications' => $listApplications
+	    ));
+	}
+
+	public function deleteAction($id, Request $request)
+	{
+		$em = $this->getDoctrine()->getManager();
+		$advert = $em->getRepository("OCPlatformBundle:Advert")->find($id);
+		if($advert === null){
+			throw new NotFoundHttpException("Cette article n'existe pas");
+			
+		}
+		
+		foreach ($advert->getCategories() as $category) {
+			$advert->removeCategory($category);
+		}
+		$em->flush();
 	}
 	
 }
