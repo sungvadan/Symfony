@@ -1,167 +1,162 @@
 <?php
+// src/OC/PlatformBundle/Controller/AdvertController.php
 
 namespace OC\PlatformBundle\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\RedirectResponse;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use OC\PlatformBundle\Entity\Advert;
-use OC\PlatformBundle\Entity\Image;
-use OC\PlatformBundle\Entity\Application;
+use OC\PlatformBundle\Form\AdvertType;
 
-/**
-* 
-*/
 class AdvertController extends Controller
 {
-	
-	public function indexAction()
-	{
-		/*test commit sur mac */
-		return $this->render('OCPlatformBundle:Advert:index.html.twig',array('listAdverts'=>array()));
-	}
+  public function indexAction($page)
+  {
+    if ($page < 1) {
+      throw $this->createNotFoundException("La page ".$page." n'existe pas.");
+    }
 
-	public function viewAction($id)
-	{
-		$advert = array(
-			'title'   => 'Recherche développpeur Symfony2',
-			'id'      => $id,
-			'author'  => 'Alexandre',
-			'content' => 'Nous recherchons un développeur Symfony2 débutant sur Lyon. Blabla…',
-			'date'    => new \Datetime()
-		);
-		$em = $this->getDoctrine()->getManager();
-		$repository = $em->getRepository('OCPlatformBundle:Advert');
+    // Ici je fixe le nombre d'annonces par page à 3
+    // Mais bien sûr il faudrait utiliser un paramètre, et y accéder via $this->container->getParameter('nb_per_page')
+    $nbPerPage = 3;
 
-	    $advert = $repository->find($id);
-	     if (null === $advert) {
-	      throw new NotFoundHttpException("L'annonce d'id ".$id." n'existe pas.");
-	    }
+    // On récupère notre objet Paginator
+    $listAdverts = $this->getDoctrine()
+      ->getManager()
+      ->getRepository('OCPlatformBundle:Advert')
+      ->getAdverts($page, $nbPerPage)
+    ;
 
-	    $listApplications = $em->getRepository('OCPlatformBundle:Application')->findBy(array('advert'=>$advert));
-        return $this->render('OCPlatformBundle:Advert:view.html.twig', array(
-	      'advert' => $advert,
-	      'listApplications' => $listApplications
-	    ));
+    // On calcule le nombre total de pages grâce au count($listAdverts) qui retourne le nombre total d'annonces
+    $nbPages = ceil(count($listAdverts)/$nbPerPage);
 
-		return $this->render('OCPlatformBundle:Advert:view.html.twig', array(
-		  'advert' => $advert
-		));
-	}
-	public function viewSlugAction($year, $slug, $_format)
-	{
-		return new Response("Affichage de $year $slug $_format");
-	}
+    // Si la page n'existe pas, on retourne une 404
+    if ($page > $nbPages) {
+      throw $this->createNotFoundException("La page ".$page." n'existe pas.");
+    }
 
-	public function addAction(Request $request)
-	{
-	    // Création de l'entité
-	    $advert = new Advert();
-	    $advert->setTitle('Recherche développeur Symfony3.');
-	    $advert->setAuthor('Alexandre');
-	    $advert->setContent("Nous recherchons un développeur Symfony2 débutant sur Lyon. Blabla…");
-	    $advert->setData(new \DateTime());
+    // On donne toutes les informations nécessaires à la vue
+    return $this->render('OCPlatformBundle:Advert:index.html.twig', array(
+      'listAdverts' => $listAdverts,
+      'nbPages'     => $nbPages,
+      'page'        => $page
+    ));
+  }
 
+  public function viewAction($id)
+  {
+    // On récupère l'EntityManager
+    $em = $this->getDoctrine()->getManager();
 
-	    $image  = new  Image();
-	    $image->setUrl('https://www.ogdpc.fr/public/images/logoOGDPCWeb.jpg');
-	    $image->setAlt('OGDPC');
+    // Pour récupérer une annonce unique : on utilise find()
+    $advert = $em->getRepository('OCPlatformBundle:Advert')->find($id);
 
-	    $advert->setImage($image);
+    // On vérifie que l'annonce avec cet id existe bien
+    if ($advert === null) {
+      throw $this->createNotFoundException("L'annonce d'id ".$id." n'existe pas.");
+    }
 
-	    $application1 = new Application();
-	    $application1->setAuthor('Van Truong PHAN');
-	    $application1->setContent("j'ai tous les compétence requises");
-	    $application1->setAdvert($advert);
-        $application1->setDate(new \DateTime());
-	
-		$application2 = new Application();
-	    $application2->setAuthor('Huy Quan PHAN');
-	    $application2->setContent("j'ai tous les compétence requises2");
-	    $application2->setAdvert($advert);
-	    $application2->setDate(new \DateTime());
+    // On récupère la liste des advertSkill pour l'annonce $advert
+    $listAdvertSkills = $em->getRepository('OCPlatformBundle:AdvertSkill')->findByAdvert($advert);
 
-	    
+    // Puis modifiez la ligne du render comme ceci, pour prendre en compte les variables :
+    return $this->render('OCPlatformBundle:Advert:view.html.twig', array(
+      'advert'           => $advert,
+      'listAdvertSkills' => $listAdvertSkills,
+    ));
+  }
+
+  public function addAction(Request $request)
+  {
+    // La gestion d'un formulaire est particulière, mais l'idée est la suivante :
 
 
+    $request->getSession()->getFlashBag()->add('info', 'Annonce bien enregistrée.');
 
-	    // On peut ne pas définir ni la date ni la publication,
-	    // car ces attributs sont définis automatiquement dans le constructeur
+    $advert = new Advert();
+    $form = $this->get('form.factory')->create(new AdvertType, $advert);
 
-	    // On récupère l'EntityManager
-	    $em = $this->getDoctrine()->getManager();
+    $form->handleRequest($request);
 
-	    // Étape 1 : On « persiste » l'entité
-	    $em->persist($advert);
+    if($form->isValid()){
+      $em = $this->getDoctrine()->getManager();
+      $em->persist($advert);
+      $em->flush();
+      $request->getSession()->getFlashBag()->add('notice','Annonce bien enregistrée');
+      return $this->redirect($this->generateUrl('oc_platform_view',array('id' => $advert->getId())));
+    }
 
-     	$em->persist($application1);
-     	$em->persist($application2);
 
-	    // Étape 2 : On « flush » tout ce qui a été persisté avant
-	    $em->flush();
 
-	    // Reste de la méthode qu'on avait déjà écrit
-	    if ($request->isMethod('POST')) {
-			$request->getSession()->getFlashBag()->add('notice', 'Annonce bien enregistrée.');
-			return $this->redirect($this->generateUrl('oc_platform_view', array('id' => $advert->getId())));
-	    }
+    // Puis on redirige vers la page de visualisation de cet article
+    return $this->render('OCPlatformBundle:Advert:add.html.twig', array(
+      'form' => $form->createView(),
+      ));
+  }
 
-	    return $this->render('OCPlatformBundle:Advert:add.html.twig');
-	}
 
-	
-	public function menuAction($limit)
-	{
-		// On fixe en dur une liste ici, bien entendu par la suite
-		// on la récupérera depuis la BDD !
-		$listAdverts = array(
-			array('id' => 2, 'title' => 'Recherche développeur Symfony2'),
-			array('id' => 5, 'title' => 'Mission de webmaster'),
-			array('id' => 9, 'title' => 'Offre de stage webdesigner')
-		);
+  public function editAction($id)
+  {
+    // On récupère l'EntityManager
+    $em = $this->getDoctrine()->getManager();
 
-		return $this->render('OCPlatformBundle:Advert:menu.html.twig', array(
-			// Tout l'intérêt est ici : le contrôleur passe
-			// les variables nécessaires au template !
-			'listAdverts' => $listAdverts
-		));
-	}
+    // On récupère l'entité correspondant à l'id $id
+    $advert = $em->getRepository('OCPlatformBundle:Advert')->find($id);
 
-	public function editAction($id, Request $request)
-	{
-		$em = $this->getDoctrine()->getManager();
-		$advert = $em->getRepository("OCPlatformBundle:Advert")->find($id);
-		if($advert === null){
-			throw new NotFoundHttpException("Cette article n'existe pas");
-		}
-		$listCategories = $em->getRepository("OCPlatformBundle:Category")->findAll();
-		foreach ($listCategories as $category) {
-			$advert->addCategory($category);
-		}
-		$em->flush();
-		$listApplications = $em->getRepository('OCPlatformBundle:Application')->findBy(array('advert'=>$advert));
-        return $this->render('OCPlatformBundle:Advert:view.html.twig', array(
-	      'advert' => $advert,
-	      'listApplications' => $listApplications
-	    ));
-	}
+    // Si l'annonce n'existe pas, on affiche une erreur 404
+    if ($advert == null) {
+      throw $this->createNotFoundException("L'annonce d'id ".$id." n'existe pas.");
+    }
 
-	public function deleteAction($id, Request $request)
-	{
-		$em = $this->getDoctrine()->getManager();
-		$advert = $em->getRepository("OCPlatformBundle:Advert")->find($id);
-		if($advert === null){
-			throw new NotFoundHttpException("Cette article n'existe pas");
-			
-		}
-		
-		foreach ($advert->getCategories() as $category) {
-			$advert->removeCategory($category);
-		}
-		$em->flush();
-	}
-	
+    // Ici, on s'occupera de la création et de la gestion du formulaire
+
+    return $this->render('OCPlatformBundle:Advert:edit.html.twig', array(
+      'advert' => $advert
+    ));
+  }
+
+  public function deleteAction($id, Request $request)
+  {
+    // On récupère l'EntityManager
+    $em = $this->getDoctrine()->getManager();
+
+    // On récupère l'entité correspondant à l'id $id
+    $advert = $em->getRepository('OCPlatformBundle:Advert')->find($id);
+
+    // Si l'annonce n'existe pas, on affiche une erreur 404
+    if ($advert == null) {
+      throw $this->createNotFoundException("L'annonce d'id ".$id." n'existe pas.");
+    }
+
+    if ($request->isMethod('POST')) {
+      // Si la requête est en POST, on deletea l'article
+
+      $request->getSession()->getFlashBag()->add('info', 'Annonce bien supprimée.');
+
+      // Puis on redirige vers l'accueil
+      return $this->redirect($this->generateUrl('oc_platform_home'));
+    }
+
+    // Si la requête est en GET, on affiche une page de confirmation avant de delete
+    return $this->render('OCPlatformBundle:Advert:delete.html.twig', array(
+      'advert' => $advert
+    ));
+  }
+
+  public function menuAction($limit = 3)
+  {
+    $listAdverts = $this->getDoctrine()
+      ->getManager()
+      ->getRepository('OCPlatformBundle:Advert')
+      ->findBy(
+        array(),                 // Pas de critère
+        array('date' => 'desc'), // On trie par date décroissante
+        $limit,                  // On sélectionne $limit annonces
+        0                        // À partir du premier
+    );
+
+    return $this->render('OCPlatformBundle:Advert:menu.html.twig', array(
+      'listAdverts' => $listAdverts
+    ));
+  }
 }
