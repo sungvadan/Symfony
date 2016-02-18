@@ -23,7 +23,7 @@ class AntifloodValidator extends ConstraintValidator
 	{
 		$request = $this->requestStack->getCurrentRequest();
 		$ip = $request->getClientIp();
-		$idFlood = $this->em
+		$isFlood = $this->em
 			->getRepository('OCPlatformBundle:Application')
 			->isFlood($ip,15)
 		;
