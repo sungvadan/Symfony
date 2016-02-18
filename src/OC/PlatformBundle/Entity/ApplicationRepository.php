@@ -10,4 +10,9 @@ namespace OC\PlatformBundle\Entity;
  */
 class ApplicationRepository extends \Doctrine\ORM\EntityRepository
 {
+
+	public function isFlood($ip,$time)
+	{
+		return false;
+	}
 }

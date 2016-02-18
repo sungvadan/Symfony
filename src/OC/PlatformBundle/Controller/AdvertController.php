@@ -8,6 +8,8 @@ use Symfony\Component\HttpFoundation\Request;
 use OC\PlatformBundle\Entity\Advert;
 use OC\PlatformBundle\Form\AdvertType;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
 
 class AdvertController extends Controller
 {
@@ -67,9 +69,12 @@ class AdvertController extends Controller
     ));
   }
 
+  /**
+   * @Security("has_role('ROLE_AUTEUR')")
+   */
   public function addAction(Request $request)
   {
-    // La gestion d'un formulaire est particulière, mais l'idée est la suivante :
+
 
 
     $request->getSession()->getFlashBag()->add('info', 'Annonce bien enregistrée.');
