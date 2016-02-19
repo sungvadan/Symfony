@@ -10,6 +10,7 @@ use OC\PlatformBundle\Form\AdvertType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
+use OC\PlatformBundle\Bigbrother\BigbrotherEvents
 
 class AdvertController extends Controller
 {
@@ -75,8 +76,6 @@ class AdvertController extends Controller
   public function addAction(Request $request)
   {
 
-
-
     $request->getSession()->getFlashBag()->add('info', 'Annonce bien enregistrée.');
 
     $advert = new Advert();
@@ -87,15 +86,15 @@ class AdvertController extends Controller
 
 
     if($form->isValid()){
+      $event = new MessagePostEvent()
+
+
       $em = $this->getDoctrine()->getManager();
       $em->persist($advert);
       $em->flush();
       $request->getSession()->getFlashBag()->add('notice','Annonce bien enregistrée');
       return $this->redirect($this->generateUrl('oc_platform_view',array('id' => $advert->getId())));
     }
-
-
-
     // Puis on redirige vers la page de visualisation de cet article
     return $this->render('OCPlatformBundle:Advert:add.html.twig', array(
       'form' => $form->createView(),
