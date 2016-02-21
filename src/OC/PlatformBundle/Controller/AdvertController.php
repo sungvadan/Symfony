@@ -10,7 +10,7 @@ use OC\PlatformBundle\Form\AdvertType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
-use OC\PlatformBundle\Bigbrother\BigbrotherEvents
+use OC\PlatformBundle\Bigbrother\BigbrotherEvents;
 
 class AdvertController extends Controller
 {
@@ -47,18 +47,18 @@ class AdvertController extends Controller
     ));
   }
 
-  public function viewAction($id)
+  public function viewAction(Advert $advert)
   {
     // On récupère l'EntityManager
     $em = $this->getDoctrine()->getManager();
 
-    // Pour récupérer une annonce unique : on utilise find()
-    $advert = $em->getRepository('OCPlatformBundle:Advert')->find($id);
+    // // Pour récupérer une annonce unique : on utilise find()
+    // $advert = $em->getRepository('OCPlatformBundle:Advert')->find($id);
 
-    // On vérifie que l'annonce avec cet id existe bien
-    if ($advert === null) {
-      throw $this->createNotFoundException("L'annonce d'id ".$id." n'existe pas.");
-    }
+    // // On vérifie que l'annonce avec cet id existe bien
+    // if ($advert === null) {
+    //   throw $this->createNotFoundException("L'annonce d'id ".$id." n'existe pas.");
+    // }
 
     // On récupère la liste des advertSkill pour l'annonce $advert
     $listAdvertSkills = $em->getRepository('OCPlatformBundle:AdvertSkill')->findByAdvert($advert);
@@ -86,7 +86,14 @@ class AdvertController extends Controller
 
 
     if($form->isValid()){
-      $event = new MessagePostEvent()
+      // $event = new MessagePostEvent($advert->getContent(),$advert->getUser());
+
+      // //on déclanche évenement
+      // $this
+      //   ->get('event_dispatcher')
+      //   ->dispatch(BigbrotherEvents::onMessagePost, $event);
+
+      // $advert->setContent($event->getMessage());
 
 
       $em = $this->getDoctrine()->getManager();
@@ -195,4 +202,12 @@ class AdvertController extends Controller
       return new Response("L'annonce est valide !");
     }
   }
+
+  public function translationAction($name)
+  {
+    $translator = $this->get('translator');
+    $text = $translator->trans('je suis un hero');
+    return $this->render('OCPlatformBundle:Advert:translation.html.twig',array('name'=>$name));
+  }
+
 }
